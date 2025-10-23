@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  name      String
+  avatar    String
+  assetId         String?
+  isAdmin         Boolean  @default(false)  // Indicates if this profile is an admin profile
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  details     ProfileDetails?
+  projects    Project[]
+  skills      ProfileSkill[]
+  education   Education[]
+  experience  Experience[]
+}
+
+model ProfileDetails {
+  id            String   @id @default(cuid())
+  profileId     String   @unique
+  summary       String   @db.Text
+  resume        String
+  bannerUrl     String
+  assetId         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  profile       Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+// Skills Management
+model Skill {
+  id          String   @id @default(cuid())
+  title       String   @unique
+  imageUrl    String
+  assetId         String?
+  type        SkillType
+  category    SkillCategory
+  isCommon    Boolean  @default(false)  // Indicates if this is a common skill
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  profileSkills ProfileSkill[]
+  projectSkills ProjectSkill[]     // For skills (category is null or "Core Competencies")
+  projectTech   ProjectTech[]      // For techStack (category is not null and not "Core Competencies")
+}
+
+enum SkillType {
+  Hard
+  Soft
+  Both
+}
+enum SkillCategory {
+  Programming_Language
+  Frontend
+  Backend
+  Database
+  Testing
+  Core_Competencies
+  Cloud_Devops
+  Practices
+  Tools
+}
+
+model ProfileSkill {
+  id        String   @id @default(cuid())
+  profileId String
+  skillId   String
+  isCustom  Boolean  @default(false)  // Indicates if this is a custom skill for the profile
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, skillId])
+}
+
+model Education {
+  id            String   @id @default(cuid())
+  profileId     String?
+  institution String
+  degree        String
+  fieldOfStudy  String
+  startDate     DateTime
+  endDate       DateTime
+  imageUrl      String
+  assetId         String?
+  isCommon      Boolean  @default(false)  // Indicates if this is a custom education entry
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  profile       Profile?    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  descriptions  EducationDescription[]
+}
+
+model EducationDescription {
+  id          String   @id @default(cuid())
+  educationId String
+  content     String
+  createdAt   DateTime @default(now())
+
+  education   Education @relation(fields: [educationId], references: [id], onDelete: Cascade)
+}
+
+
+model Experience {
+  id          String   @id @default(cuid())
+  profileId   String?
+  company   String
+  role        String
+  startDate   DateTime
+  endDate     DateTime
+  imageUrl    String
+  assetId         String?
+  isCommon    Boolean  @default(false)  // Indicates if this is a common company
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  profile     Profile?  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  descriptions ExperienceDescription[]
+}
+
+model ExperienceDescription {
+  id          String   @id @default(cuid())
+  experienceId String
+  content     String
+  createdAt   DateTime @default(now())
+
+  experience  Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+}
+
+model Project {
+  id            String   @id @default(cuid())
+  profileId     String
+  title         String
+  description   String   @db.Text
+  imageUrl      String
+  assetId       String?
+  sourceLink    String
+  demoLink      String
+  demoVideoLink String?
+  type          ProjectType?
+  status          ProjectStatus?
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  profile       Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  skills        ProjectSkill[]
+  techStack     ProjectTech[]
+  media         ProjectMedia[]
+}
+
+enum ProjectType {
+  Web_Development
+  Mobile_Development
+  Web_Testing
+  Mobile_Testing
+  API_Testing
+  Others
+}
+
+enum ProjectStatus {
+  Planning
+  In_Progress
+  Completed
+}
+
+model ProjectSkill {
+  id        String   @id @default(cuid())
+  projectId String
+  skillId   String
+  usageLevel     Int
+  createdAt DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, skillId])
+}
+
+model ProjectTech {
+  id        String   @id @default(cuid())
+  projectId String
+  skillId   String   // Changed from name to skillId to reference Skill model
+  usageLevel     Int
+  createdAt DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, skillId])
+}
+
+model ProjectMedia {
+  id        String   @id @default(cuid())
+  projectId String
+  url       String
+  assetId         String?
+  createdAt DateTime @default(now())
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
